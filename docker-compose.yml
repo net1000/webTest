@@ -9,7 +9,6 @@ services:
       POSTGRES_PASSWORD: 123456789
       POSTGRES_DB: camp_db
     volumes:
-      # Для PG18+ том монтируется в корень /var/lib/postgresql
       - pgdata:/var/lib/postgresql
       - ./server/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
@@ -67,22 +66,25 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./certbot/www:/var/www/certbot:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
       - ./server/uploads:/app/uploads:ro
     depends_on:
       - backend
       - frontend
 
-  # Certbot для получения SSL сертификатов
+  # Certbot для получения и обновления SSL сертификатов
   certbot:
     image: certbot/certbot
     container_name: camp-certbot
+    restart: unless-stopped
     volumes:
-      - ./certbot/www:/var/www/certbot
-      - ./certbot/conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 volumes:
   pgdata:
   frontend_node_modules:
+  certbot_www:   # Named volume для challenge файлов
+  certbot_conf:  # Named volume для самих сертификатов
